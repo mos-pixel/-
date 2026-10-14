@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f8fa">
+<title>AI制度コンシェルジュ v0.6</title>
+<style>
+:root{
+  --bg:#f7f8fa; --card:#fff; --text:#20242a; --muted:#68707c;
+  --line:#e4e7eb; --accent:#2457d6; --accent2:#eef3ff;
+  --good:#157347; --warn:#9a6500; --danger:#b42318;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","Noto Sans JP",sans-serif;line-height:1.55}
+button,input,select{font:inherit}
+.app{max-width:680px;margin:0 auto;padding:20px 16px 40px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.brand{font-weight:800;font-size:17px}
+.version{font-size:12px;color:var(--muted)}
+.progress{height:6px;background:#e9ebef;border-radius:99px;overflow:hidden;margin-bottom:20px}
+.progress > div{height:100%;background:var(--accent);transition:.25s;width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;box-shadow:0 5px 20px rgba(20,30,50,.05)}
+.hero{padding:30px 24px}
+h1{font-size:30px;line-height:1.25;margin:0 0 14px}
+h2{font-size:22px;line-height:1.35;margin:0 0 10px}
+h3{font-size:18px;margin:0 0 8px}
+p{margin:0 0 14px}
+.lead{font-size:16px;color:#454c56}
+.step{font-size:13px;font-weight:700;color:var(--accent);margin-bottom:7px}
+.options{display:grid;gap:11px;margin-top:20px}
+.option{
+  width:100%;text-align:left;padding:16px 17px;border:2px solid var(--line);
+  border-radius:14px;background:#fff;color:var(--text);font-weight:700;cursor:pointer;
+  transition:.15s;
+}
+.option:hover,.option.selected{border-color:var(--accent);background:var(--accent2)}
+.option small{display:block;font-weight:400;color:var(--muted);margin-top:3px}
+.actions{display:flex;gap:10px;margin-top:22px}
+.btn{border:0;border-radius:13px;padding:14px 18px;font-weight:800;cursor:pointer}
+.primary{background:var(--accent);color:#fff;flex:1}
+.secondary{background:#eef0f3;color:#30353b}
+.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+select{
+  width:100%;padding:15px;border:2px solid var(--line);border-radius:13px;background:#fff;
+  margin-top:10px;color:var(--text)
+}
+.notice{padding:13px 14px;border-radius:12px;background:#fff8e7;color:#6d4b00;font-size:13px;margin-top:16px}
+.privacy{font-size:12px;color:var(--muted);margin-top:14px}
+.result-head{margin-bottom:18px}
+.count{display:inline-block;background:var(--accent2);color:var(--accent);font-weight:800;padding:5px 9px;border-radius:99px;font-size:13px}
+.result-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:14px}
+.badge{display:inline-block;font-size:12px;font-weight:800;padding:5px 8px;border-radius:7px;background:#eef7f1;color:var(--good);margin-bottom:9px}
+.reason{background:#f5f7fb;border-radius:12px;padding:12px;margin:12px 0}
+.reason strong{display:block;margin-bottom:4px}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.meta div{background:#f8f9fb;border-radius:10px;padding:10px}
+.meta span{display:block;font-size:11px;color:var(--muted)}
+.meta b{font-size:14px}
+.detail-section{border-top:1px solid var(--line);padding-top:15px;margin-top:15px}
+.detail-section ul{margin:8px 0 0;padding-left:20px}
+.official{display:block;text-decoration:none;text-align:center;background:var(--accent);color:#fff;padding:13px;border-radius:12px;font-weight:800;margin-top:15px}
+.backtop{margin-top:15px;text-align:center}
+.linkbtn{background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer}
+.empty{padding:18px;background:#fff4f2;border-radius:12px;color:#7d2b22}
+@media(max-width:430px){
+  .app{padding:15px 12px 30px}.card{padding:20px}.hero{padding:25px 20px}h1{font-size:27px}.meta{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">🧭 AI制度コンシェルジュ</div>
+    <div class="version">v0.6</div>
+  </div>
+  <div class="progress"><div id="progressBar"></div></div>
+  <main id="app"></main>
+</div>
+
+<script>
+const programs = [
+  {
+    id:"it",
+    name:"デジタル化・AI導入補助金2026",
+    purposes:["it"],
+    statuses:["sole","corp"],
+    amounts:["lt50","50_100","100_300","300plus","unknown"],
+    regions:["all"],
+    reason:"IT・AI・ソフトウェアの導入を考えている事業者と相性が良い制度です。",
+    spend:"ソフトウェア購入費、クラウド利用料、導入・設定・研修など",
+    rate:"通常枠：1/2以内",
+    max:"最大450万円（通常枠）",
+    deadline:"2026年10月30日 17:00（通常枠）",
+    area:"全国",
+    next:["導入したいIT・AIの内容を決める","対象ITツールか公式サイトで確認","必要な申請準備を進める"],
+    url:"https://it-shien.smrj.go.jp/schedule",
+    extra:null
+  },
+  {
+    id:"jizokuka",
+    name:"小規模事業者持続化補助金〈一般型・通常枠〉",
+    purposes:["shop","ad"],
+    statuses:["sole","corp"],
+    amounts:["lt50","50_100","100_300","300plus","unknown"],
+    regions:["all"],
+    reason:"広告・ホームページ・販路開拓など、小規模事業者の販売促進と相性が良い制度です。",
+    spend:"広告、Webサイト等の販路開拓に関する経費など",
+    rate:"原則 2/3",
+    max:"最大250万円（枠・特例により変動）",
+    deadline:"2026年11月5日受付開始 → 12月15日 17:00締切予定",
+    area:"全国（商工会等の管轄地域）",
+    next:["やりたい販路開拓の内容を整理","商工会・商工会議所へ相談","第20回公募の要件を確認"],
+    url:"https://official.jizokukanb.com/shinsei",
+    extra:{question:"従業員は何人ですか？",key:"employees",options:["0","1_5","6plus"],filter:(p,v)=>true}
+  },
+  {
+    id:"shoryoku_catalog",
+    name:"中小企業省力化投資補助金（カタログ注文型）",
+    purposes:["equipment"],
+    statuses:["sole","corp"],
+    amounts:["50_100","100_300","300plus","unknown"],
+    regions:["all"],
+    reason:"人手不足への対応として、カタログ掲載の省力化製品を導入したい場合に候補になります。",
+    spend:"カタログに登録された省力化製品等",
+    rate:"1/2以下",
+    max:"従業員5人以下：最大200万円（賃上げ特例で300万円）",
+    deadline:"随時受付中",
+    area:"全国",
+    next:["省力化したい作業を整理","製品カタログから対象製品を確認","販売事業者と申請内容を確認"],
+    url:"https://shoryokuka.smrj.go.jp/catalog/",
+    extra:{question:"設備を導入する主な目的は？",key:"equipmentPurpose",options:["省力化","newbusiness","improvement"],filter:(p,v)=>v==="省力化"}
+  },
+  {
+    id:"shoryoku_general",
+    name:"中小企業省力化投資補助金（一般型）",
+    purposes:["equipment"],
+    statuses:["sole","corp"],
+    amounts:["100_300","300plus","unknown"],
+    regions:["all"],
+    reason:"個別の現場に合わせた設備導入・システム構築による省力化投資が候補になる制度です。",
+    spend:"個別の現場・事業内容に合わせた設備導入、システム構築等",
+    rate:"中小企業：1/2（特例あり）",
+    max:"従業員5人以下：最大750万円（特例で1,000万円）",
+    deadline:"第8回：2026年9月18日〜10月16日 17:00",
+    area:"全国",
+    next:["省力化したい業務を整理","設備・システムの構想を作る","第8回公募要領を確認"],
+    url:"https://shoryokuka.smrj.go.jp/ippan/",
+    extra:{question:"設備を導入する主な目的は？",key:"equipmentPurpose",options:["省力化","newbusiness","improvement"],filter:(p,v)=>v==="省力化"}
+  },
+  {
+    id:"mono",
+    name:"新事業進出・ものづくり商業サービス補助金",
+    purposes:["equipment","newbusiness"],
+    statuses:["sole","corp"],
+    amounts:["100_300","300plus","unknown"],
+    regions:["all"],
+    reason:"新製品・新サービスの開発や、新市場・高付加価値事業への進出を伴う投資が候補になります。",
+    spend:"機械装置・システム構築、建物、クラウド、広告宣伝・販売促進など",
+    rate:"1/2〜2/3（枠・事業者区分等により異なる）",
+    max:"最大9,000万円（枠・従業員数等により変動）",
+    deadline:"第1回：2026年10月30日 18:00締切予定",
+    area:"全国",
+    next:["新しい商品・サービスの内容を整理","既存事業との違いを整理","GビズIDプライム等の準備と公募要領確認"],
+    url:"https://seisansei.smrj.go.jp/subsidy_info/business_manufacturing_subsidy.html",
+    extra:{question:"今回の投資は新しい商品・サービスにつながりますか？",key:"newbusiness",options:["yes","no"],filter:(p,v)=>v==="yes"}
+  },
+  {
+    id:"startup_fukuoka",
+    name:"福岡市新規創業促進補助金",
+    purposes:["newbusiness"],
+    statuses:["startup"],
+    amounts:["lt50","50_100","100_300","300plus","unknown"],
+    regions:["福岡県|福岡市"],
+    reason:"福岡市で新たに会社を設立する創業者向けの制度です。",
+    spend:"会社設立時の登録免許税等",
+    rate:"対象経費の条件による",
+    max:"法人設立時の登録免許税相当等",
+    deadline:"2026年4月1日〜2027年3月31日（予算到達で終了の場合あり）",
+    area:"福岡市",
+    next:["特定創業支援等事業の受講状況を確認","会社設立予定を整理","福岡市の最新案内を確認"],
+    url:"https://www.city.fukuoka.lg.jp/keizai/r-support/business/tokutei-sougyou-sientoujigyou_08.html",
+    extra:{question:"事業を始める地域は福岡市ですか？",key:"startupArea",options:["yes","no"],filter:(p,v)=>v==="yes"}
+  },
+  {
+    id:"kobe_shop",
+    name:"神戸市 商店街・小売市場新規出店チャレンジ応援事業",
+    purposes:["shop","newbusiness"],
+    statuses:["startup","sole","corp"],
+    amounts:["lt50","50_100","100_300","300plus","unknown"],
+    regions:["兵庫県|神戸市"],
+    reason:"神戸市内の商店街・小売市場等で新規出店を目指す場合の候補です。",
+    spend:"新規出店に伴う店舗工事等",
+    rate:"年度・事業区分により異なる",
+    max:"公募要件により異なる",
+    deadline:"2026年度：12月28日までエントリー予定",
+    area:"神戸市",
+    next:["出店予定地を確認","対象となる商店街等か確認","神戸市の最新募集要項を確認"],
+    url:"https://www.city.kobe.lg.jp/a92777/business/sangyoshinko/shokogyo/shop/sinkisyutten.html",
+    extra:{question:"出店予定地は神戸市内ですか？",key:"cityArea",options:["yes","no"],filter:(p,v)=>v==="yes"}
+  }
+];
+
+const state={
+  screen:"top", step:1,
+  purpose:null, region:null, status:null, amount:null,
+  extraAnswers:{}, candidates:[]
+};
+
+const purposeLabels={
+  equipment:"設備・機械",it:"IT・AI・ソフトウェア",shop:"店舗・事務所改装",
+  ad:"広告・ホームページ",newbusiness:"新規事業",hire:"採用",other:"その他"
+};
+const statusLabels={sole:"個人事業主",corp:"法人",startup:"これから創業"};
+const amountLabels={lt50:"50万円未満","50_100":"50〜100万円","100_300":"100〜300万円","300plus":"300万円以上",unknown:"未定"};
+
+function setProgress(step){
+  const pct=state.screen==="top"?0:state.screen==="result"||state.screen==="detail"?100:(step/4)*100;
+  document.getElementById("progressBar").style.width=pct+"%";
+}
+function render(){
+  const app=document.getElementById("app");
+  if(state.screen==="top") app.innerHTML=topHTML();
+  else if(state.screen==="question") app.innerHTML=questionHTML();
+  else if(state.screen==="extra") app.innerHTML=extraHTML();
+  else if(state.screen==="result") app.innerHTML=resultHTML();
+  else if(state.screen==="detail") app.innerHTML=detailHTML();
+  setProgress(state.step);
+}
+function topHTML(){
+ return `<section class="card hero">
+   <h1>あなたに合いそうな<br>補助金を探します</h1>
+   <p class="lead">補助金の名前を知らなくても大丈夫。<br>「何にお金を使いたいか」から一緒に整理します。</p>
+   <div class="actions"><button class="btn primary" onclick="start()">探してみる</button></div>
+   <p class="privacy">入力した情報はこのページ内での候補判定にのみ使用し、保存しません。</p>
+ </section>`;
+}
+function questionHTML(){
+ const step=state.step;
+ let title="", body="";
+ if(step===1){
+  title="何にお金を使いたいですか？";
+  body=Object.entries(purposeLabels).map(([k,v])=>`<button class="option ${state.purpose===k?'selected':''}" onclick="choosePurpose('${k}')">${v}</button>`).join("");
+ }else if(step===2){
+  title="事業を行っている地域を教えてください";
+  body=`<label>都道府県<select id="pref"><option value="">選択してください</option>${["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"].map(x=>`<option ${state.region?.pref===x?"selected":""}>${x}</option>`).join("")}</select></label>
+  <label>市区町村<input id="city" type="text" placeholder="例：大阪市北区" value="${state.region?.city||""}"></label>`;
+ }else if(step===3){
+  title="現在の状況を教えてください";
+  body=Object.entries(statusLabels).map(([k,v])=>`<button class="option ${state.status===k?'selected':''}" onclick="chooseStatus('${k}')">${v}</button>`).join("");
+ }else{
+  title="だいたいいくらくらい使う予定ですか？";
+  body=Object.entries(amountLabels).map(([k,v])=>`<button class="option ${state.amount===k?'selected':''}" onclick="chooseAmount('${k}')">${v}</button>`).join("");
+ }
+ return `<section class="card">
+   <div class="step">STEP ${step} / 4</div><h2>${title}</h2>
+   <div class="options">${body}</div>
+   ${step===2?`<div class="actions"><button class="btn primary" onclick="saveRegion()">次へ</button></div>`:""}
+   <div class="actions"><button class="btn secondary" onclick="back()">戻る</button><button class="btn ghost" onclick="resetAll()">最初から</button></div>
+ </section>`;
+}
+function extraHTML(){
+ const ex=state.extra;
+ return `<section class="card">
+   <div class="step">候補をもう少し絞ります</div>
+   <h2>${ex.question}</h2>
+   <p class="lead">今の回答だけでは候補が多いため、この質問だけ追加します。</p>
+   <div class="options">${extraOptions(ex).map(([v,label])=>`<button class="option" onclick="answerExtra('${v}')">${label}</button>`).join("")}</div>
+   <div class="actions"><button class="btn secondary" onclick="backFromExtra()">戻る</button><button class="btn ghost" onclick="resetAll()">最初から</button></div>
+ </section>`;
+}
+function extraOptions(ex){
+ if(ex.key==="equipmentPurpose") return [["省力化","人手を減らしたい・作業を自動化したい"],["newbusiness","新しい商品・サービスを作りたい"],["improvement","店舗・事業所を改善したい"]];
+ if(ex.key==="newbusiness") return [["yes","はい"],["no","いいえ"]];
+ return [["yes","はい"],["no","いいえ"]];
+}
+function matchPrograms(){
+ let arr=programs.filter(p=>{
+   if(!p.purposes.includes(state.purpose)) return false;
+   if(!p.statuses.includes(state.status)) return false;
+   if(!p.amounts.includes(state.amount)) return false;
+   if(p.regions.includes("all")) return true;
+   const r=(state.region?.pref||"")+"|"+(state.region?.city||"");
+   return p.regions.includes(r);
+ });
+ // For initial prototype, national programs remain primary; local programs only appear when exact region matches.
+ return arr;
+}
+function afterInitial(){
+ state.candidates=matchPrograms();
+ if(state.candidates.length<=3){state.screen="result";render();return;}
+ // Find a useful extra question represented among candidates.
+ const ex=state.candidates.find(p=>p.extra)?.extra;
+ if(ex){state.extra=ex;state.screen="extra";render();return;}
+ state.candidates=state.candidates.slice(0,3);state.screen="result";render();
+}
+function choosePurpose(v){state.purpose=v; next();}
+function chooseStatus(v){state.status=v;next();}
+function chooseAmount(v){state.amount=v;next();}
+function next(){
+ if(state.step<4){state.step++;render();}else afterInitial();
+}
+function saveRegion(){
+ const pref=document.getElementById("pref").value, city=document.getElementById("city").value.trim();
+ if(!pref||!city){alert("都道府県と市区町村を選択してください。");return;}
+ state.region={pref,city};next();
+}
+function answerExtra(v){
+ state.extraAnswers[state.extra.key]=v;
+ // Re-rank/filter by extra condition.
+ state.candidates=state.candidates.filter(p=>!p.extra || p.extra.key!==state.extra.key || p.extra.filter(p,v));
+ if(state.candidates.length>3) state.candidates=state.candidates.slice(0,3);
+ state.screen="result";render();
+}
+function resultHTML(){
+ const list=state.candidates.slice(0,3);
+ return `<section>
+   <div class="result-head"><div class="step">判定結果</div><h2>あなたに合いそうな制度</h2><p>候補を${list.length}件に絞りました。</p><span class="count">${list.length}件</span></div>
+   ${list.length?list.map(cardHTML).join(""):`<div class="empty">今回の回答だけでは、候補を確実に絞り込める制度がありませんでした。条件を変えてもう一度お試しください。</div>`}
+   <div class="actions"><button class="btn secondary" onclick="backToQuestions()">回答を見直す</button><button class="btn ghost" onclick="resetAll()">最初から</button></div>
+   <p class="notice">これは制度の「候補」を案内する機能です。実際の対象条件・採択・支給額は必ず公式サイトで確認してください。</p>
+ </section>`;
+}
+function cardHTML(p,i){
+ return `<article class="result-card">
+   <span class="badge">おすすめ候補 ${i+1}</span>
+   <h3>${p.name}</h3>
+   <div class="reason"><strong>なぜおすすめ？</strong>${p.reason}<br><small>あなたの回答：${purposeLabels[state.purpose]} / ${statusLabels[state.status]} / ${amountLabels[state.amount]}</small></div>
+   <div class="meta">
+     <div><span>対象となる支出</span><b>${p.spend}</b></div>
+     <div><span>補助率</span><b>${p.rate}</b></div>
+     <div><span>最大金額</span><b>${p.max}</b></div>
+     <div><span>申請期限</span><b>${p.deadline}</b></div>
+     <div><span>対象地域</span><b>${p.area}</b></div>
+   </div>
+   <button class="btn primary" style="width:100%" onclick="showDetail('${p.id}')">詳細を見る</button>
+ </article>`;
+}
+function detailHTML(){
+ const p=programs.find(x=>x.id===state.detailId);
+ return `<section class="card">
+   <div class="step">制度詳細</div><h2>${p.name}</h2>
+   <div class="reason"><strong>あなたにおすすめの理由</strong>${p.reason}</div>
+   <div class="detail-section"><h3>対象となる支出</h3><p>${p.spend}</p></div>
+   <div class="detail-section"><h3>補助率・上限</h3><p>${p.rate}<br>${p.max}</p></div>
+   <div class="detail-section"><h3>申請期限</h3><p>${p.deadline}</p></div>
+   <div class="detail-section"><h3>対象地域</h3><p>${p.area}</p></div>
+   <div class="detail-section"><h3>次にやること</h3><ul>${p.next.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+   <div class="detail-section"><h3>大切な注意</h3><p>このページでは「候補になりそうか」を整理しています。細かな対象要件、対象経費、申請方法、予算終了等は公式情報を優先してください。</p></div>
+   <a class="official" href="${p.url}" target="_blank" rel="noopener">公式サイトで確認する</a>
+   <div class="backtop"><button class="linkbtn" onclick="state.screen='result';render()">← おすすめ3件に戻る</button></div>
+ </section>`;
+}
+function showDetail(id){state.detailId=id;state.screen="detail";render();}
+function back(){
+ if(state.step>1){state.step--;render();}else{state.screen="top";render();}
+}
+function backFromExtra(){state.screen="question";state.step=4;render();}
+function backToQuestions(){state.screen="question";state.step=4;render();}
+function resetAll(){
+ Object.assign(state,{screen:"top",step:1,purpose:null,region:null,status:null,amount:null,extraAnswers:{},candidates:[]});
+ render();
+}
+function start(){state.screen="question";state.step=1;render();}
+render();
+</script>
+</body>
+</html>
